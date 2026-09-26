@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FinFET CMOS Inverter — 3D CAD Explorer</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:rgba(20,26,34,.93); --panel-solid:#161b22; --line:#263040;
+  --txt:#c9d1d9; --dim:#7d8794; --acc:#00e5ff; --acc-glow:rgba(0,229,255,.45);
+  --vdd:#ff4d4d; --gndc:#9fb0bd; --inc:#ffcc00; --outc:#00f5a0;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--txt);overflow:hidden;
+  font:13px/1.45 ui-monospace,"SF Mono","Cascadia Code",Consolas,Menlo,monospace;
+  display:flex;flex-direction:column;height:100dvh;
+}
+a{color:var(--acc);text-decoration:none}
+a:hover{text-shadow:0 0 8px var(--acc-glow)}
+
+/* ---------- top toolbar ---------- */
+#toolbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:calc(6px + env(safe-area-inset-top)) 14px 6px 14px;
+  background:linear-gradient(180deg,rgba(13,17,23,.97),rgba(13,17,23,.85));
+  border-bottom:1px solid var(--line);z-index:40;
+}
+.brand{display:flex;align-items:center;gap:9px;margin-right:auto;min-width:0}
+.brand-badge{
+  width:30px;height:30px;border-radius:8px;flex:none;
+  background:linear-gradient(135deg,#12222b,#0b3a46);border:1px solid #16495a;color:var(--acc);
+  display:grid;place-items:center;font-weight:700;box-shadow:inset 0 0 12px rgba(0,229,255,.25);
+}
+.brand b{font-size:13px;letter-spacing:.08em;white-space:nowrap}
+.brand small{display:block;color:var(--dim);font-size:10px;letter-spacing:.12em}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:rgba(22,27,34,.7)}
+.seg button{
+  appearance:none;border:0;background:transparent;color:var(--dim);font:inherit;font-size:11px;
+  letter-spacing:.06em;padding:7px 12px;cursor:pointer;transition:.18s;
+}
+.seg button:hover{color:var(--txt);background:rgba(0,229,255,.07)}
+.seg button.on{color:#031b20;background:var(--acc);font-weight:700;box-shadow:0 0 14px var(--acc-glow)}
+.tb-btn{
+  border:1px solid var(--line);border-radius:8px;padding:7px 14px;color:var(--txt);
+  background:rgba(22,27,34,.7);cursor:pointer;font:inherit;font-size:11px;letter-spacing:.08em;transition:.18s;
+}
+.tb-btn:hover{border-color:var(--acc);color:var(--acc);box-shadow:0 0 12px var(--acc-glow);transform:translateY(-1px)}
+
+/* ---------- 3D viewport ---------- */
+#viewport{position:relative;flex:1;min-height:0;overflow:hidden}
+#c{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.hud{position:absolute;z-index:20}
+#cornerNote{
+  left:12px;bottom:10px;max-width:340px;color:#66707c;font-size:10px;line-height:1.5;
+  pointer-events:none;text-shadow:0 1px 2px #000;
+}
+#badge{right:12px;top:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:360px;justify-content:flex-end}
+.b-chip{
+  border:1px solid var(--line);background:rgba(13,17,23,.85);padding:3px 10px;border-radius:999px;
+  font-size:10.5px;letter-spacing:.05em;transition:.2s;color:var(--dim);
+}
+.b-chip.on{color:#031b20;font-weight:700}
+#bIn.on{background:var(--inc);border-color:var(--inc)}
+#bOut.on{background:var(--outc);border-color:var(--outc)}
+#bP.on,#bN.on{background:#e6edf3;border-color:#e6edf3}
+.b-note{flex-basis:100%;text-align:right;color:#5c6672;font-size:9.5px;max-width:360px}
+#statusBtn{
+  right:12px;top:12px;display:none;border:1px solid var(--line);border-radius:8px;color:var(--acc);
+  background:rgba(13,17,23,.9);padding:6px 12px;cursor:pointer;font:inherit;font-size:11px;letter-spacing:.1em;
+}
+#statusBtn:hover{box-shadow:0 0 12px var(--acc-glow)}
+#statusPop{
+  right:12px;top:52px;width:280px;padding:12px;display:none;z-index:45;
+}
+#statusPop.open{display:block}
+
+/* view controls */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(8px);box-shadow:0 8px 30px rgba(0,0,0,.5)}
+#viewControls{left:12px;top:12px;width:242px;transition:left .28s ease}
+body.left-open #viewControls{left:350px}
+.vc-h{
+  padding:8px 12px;font-size:11px;letter-spacing:.14em;color:var(--acc);cursor:pointer;
+  display:flex;justify-content:space-between;user-select:none;
+}
+.vc-h:hover{text-shadow:0 0 8px var(--acc-glow)}
+.vc-b{padding:4px 12px 12px;display:grid;gap:9px}
+#viewControls.closed .vc-b{display:none}
+.vc-l{display:grid;gap:5px;font-size:10px;color:var(--dim);letter-spacing:.08em}
+.vc-l span{color:var(--txt)}
+input[type=range]{appearance:none;-webkit-appearance:none;height:4px;background:#26313f;border-radius:2px;outline:0;cursor:pointer;width:100%}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--acc);
+  box-shadow:0 0 10px var(--acc-glow);border:2px solid #06222a;
+}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--acc);border:2px solid #06222a;box-shadow:0 0 10px var(--acc-glow)}
+
+/* popover */
+#popover{
+  position:fixed;z-index:70;width:292px;background:var(--panel);border:1px solid var(--acc);border-radius:10px;
+  padding:12px 14px;box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 18px var(--acc-glow);
+  transform:translate(-50%,-100%);pointer-events:auto;
+}
+#popover.below{transform:translate(-50%,26px)}
+.pop-arrow{
+  position:absolute;left:50%;bottom:-7px;width:12px;height:12px;background:var(--panel-solid);
+  border-right:1px solid var(--acc);border-bottom:1px solid var(--acc);transform:translateX(-50%) rotate(45deg);
+}
+#popover.below .pop-arrow{bottom:auto;top:-7px;border:0;border-left:1px solid var(--acc);border-top:1px solid var(--acc)}
+#popClose{position:absolute;top:6px;right:8px;background:none;border:0;color:var(--dim);font-size:16px;cursor:pointer;line-height:1}
+#popClose:hover{color:var(--acc)}
+.pop-title{font-size:14px;font-weight:700;color:var(--acc);padding-right:18px}
+.pop-cat{display:inline-block;margin:5px 0 8px;font-size:9.5px;letter-spacing:.14em;color:#031b20;background:var(--acc);border-radius:4px;padding:1px 7px;font-weight:700}
+.pop-body{font-size:11.5px;color:var(--txt)}
+.pop-body p{margin:5px 0}
+.pop-body .k{color:var(--dim);font-size:9.5px;letter-spacing:.12em}
+table.dims{width:100%;border-collapse:collapse;margin-top:6px}
+table.dims td{padding:2px 4px;border-bottom:1px solid #1c242f;font-size:11px}
+table.dims td:last-child{text-align:right;color:var(--acc)}
+
+/* schematic */
+#schematic{
+  position:absolute;inset:0;display:grid;place-items:center;overflow:auto;
+  background:radial-gradient(ellipse at 50% 40%,#131a23 0%,#0d1117 70%);
+}
+#schematic::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(120,150,180,.13) 1px,transparent 1px);background-size:24px 24px;
+}
+#schematic[hidden]{display:none}
+.sch-wrap{position:relative;text-align:center;padding:20px}
+.sch-title{color:var(--dim);letter-spacing:.2em;font-size:11px;margin-bottom:10px}
+#schematic svg{max-width:min(92vw,620px);height:auto}
+#schematic svg text{font-family:inherit;pointer-events:none}
+#schematic .hit{cursor:pointer}
+#schematic .hit:hover{filter:drop-shadow(0 0 6px var(--acc))}
+#schematic .hit rect{fill:transparent}
+
+/* ---------- drawers ---------- */
+.drawer{position:fixed;top:0;bottom:0;z-index:30;width:0;overflow:visible}
+#leftDrawer{left:0}
+#rightDrawer{right:0}
+.drawer-inner{
+  position:absolute;top:10px;bottom:10px;width:320px;max-width:86vw;overflow-y:auto;overscroll-behavior:contain;
+  background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);
+  box-shadow:0 10px 40px rgba(0,0,0,.55);transition:transform .28s ease;pointer-events:auto;
+  padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
+}
+#leftDrawer .drawer-inner{left:0;border-radius:0 12px 12px 0;transform:translateX(-101%)}
+#rightDrawer .drawer-inner{right:0;border-radius:12px 0 0 12px;transform:translateX(101%)}
+.drawer.open .drawer-inner{transform:none}
+.grip{
+  position:absolute;top:42%;width:26px;height:78px;border:1px solid var(--line);
+  background:var(--panel-solid);cursor:pointer;display:grid;place-items:center;transition:.2s;z-index:31;
+}
+#leftDrawer .grip{left:0;transform:translateX(-100%);border-right:0;border-radius:10px 0 0 10px}
+#rightDrawer .grip{right:0;transform:translateX(100%);border-left:0;border-radius:0 10px 10px 0}
+.grip:hover{box-shadow:0 0 16px var(--acc-glow);border-color:var(--acc);transform:translateX(-100%) scale(1.07)}
+#rightDrawer .grip:hover{transform:translateX(100%) scale(1.07)}
+.grip svg circle{fill:var(--acc)}
+.sec{border-bottom:1px solid var(--line)}
+.sec-h{
+  padding:11px 14px;font-size:11px;letter-spacing:.14em;cursor:pointer;display:flex;
+  justify-content:space-between;align-items:center;user-select:none;
+}
+.sec-h:hover{color:var(--acc)}
+.sec-h .caret{color:var(--acc);font-size:13px}
+.sec.closed .sec-b{display:none}
+.sec-b{padding:2px 14px 14px}
+.lay{display:flex;align-items:center;gap:9px;padding:4px 0;cursor:pointer;font-size:12px;user-select:none}
+.lay:hover{color:var(--acc)}
+.lay input{accent-color:var(--acc)}
+.sw{width:14px;height:14px;border-radius:4px;border:1px solid rgba(255,255,255,.25);flex:none}
+.leg{display:flex;gap:9px;align-items:flex-start;padding:4px 0;font-size:11.5px}
+.leg .sw{margin-top:2px}
+.leg div span{display:block;color:var(--dim);font-size:10.5px}
+select{
+  width:100%;background:#161b22;color:var(--txt);border:1px solid var(--line);border-radius:6px;
+  padding:6px 8px;font:inherit;font-size:12px;cursor:pointer;
+}
+select:hover{border-color:var(--acc)}
+.note{color:#5c6672;font-size:10px;line-height:1.5;margin-top:8px}
+table.ltable{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+table.ltable th{text-align:left;color:var(--dim);font-weight:400;font-size:9.5px;letter-spacing:.12em;padding:3px 4px;border-bottom:1px solid var(--line)}
+table.ltable td{padding:3px 4px;border-bottom:1px solid #1c242f}
+table.ltable td:last-child{text-align:right;color:var(--acc)}
+
+/* inspector + tree */
+.insp-empty{color:var(--dim);font-size:11.5px;padding:6px 0}
+.insp-title{font-size:14px;font-weight:700;color:var(--acc)}
+.insp-row{margin:9px 0}
+.insp-k{font-size:9.5px;color:var(--dim);letter-spacing:.12em;margin-bottom:2px}
+.insp-v{font-size:12px}
+.tree ul{list-style:none;padding-left:14px;margin:4px 0}
+.tree>ul{padding-left:4px}
+.tree li{padding:2px 0;font-size:12px;color:var(--dim)}
+li.t-root{color:var(--acc);font-weight:700;letter-spacing:.1em;font-size:12px}
+li.t-sec{color:var(--txt);font-weight:600;letter-spacing:.06em;font-size:11px;margin-top:7px}
+li[data-cid]{cursor:pointer;border-radius:6px;padding:2px 6px;margin:0 -6px;transition:.15s}
+li[data-cid]:hover{color:var(--acc);background:rgba(0,229,255,.08)}
+li[data-cid].sel{color:var(--acc);background:rgba(0,229,255,.14);text-shadow:0 0 8px var(--acc-glow)}
+
+/* ---------- footer ---------- */
+#foot{
+  display:flex;align-items:center;gap:10px;padding:6px 14px calc(6px + env(safe-area-inset-bottom)) 14px;
+  background:rgba(13,17,23,.92);border-top:1px solid var(--line);z-index:40;font-size:11px;color:var(--dim);
+}
+.badge-circle{
+  width:26px;height:26px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,#0b3a46,#12222b);border:1px solid #16495a;color:var(--acc);
+  display:grid;place-items:center;font-weight:700;font-size:10px;transition:.2s;
+}
+.badge-circle:hover{box-shadow:0 0 12px var(--acc-glow)}
+.gh svg{fill:#8b949e;transition:.2s;display:block}
+.gh:hover svg{fill:var(--acc);filter:drop-shadow(0 0 6px var(--acc-glow))}
+
+/* ---------- voice assistant (bottom floating widget) ---------- */
+#voiceAssistant{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(54px + env(safe-area-inset-bottom));z-index:1000;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  pointer-events:none;max-width:96vw;
+}
+#voiceChips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;pointer-events:auto}
+.v-chip{
+  border:1px solid rgba(0,229,255,.35);background:rgba(13,17,23,.85);color:#9feaf7;
+  border-radius:999px;padding:5px 12px;font:inherit;font-size:10.5px;letter-spacing:.04em;
+  cursor:pointer;transition:.18s;backdrop-filter:blur(6px);
+}
+.v-chip:hover{border-color:var(--acc);color:var(--acc);box-shadow:0 0 12px var(--acc-glow);transform:translateY(-1px)}
+#voicePill{
+  display:flex;align-items:center;gap:12px;padding:8px 14px 8px 8px;border-radius:999px;
+  background:rgba(13,17,23,.72);border:1px solid #00e5ff33;backdrop-filter:blur(14px);
+  box-shadow:0 10px 34px rgba(0,0,0,.55),inset 0 0 24px rgba(0,229,255,.05);
+  pointer-events:auto;max-width:92vw;
+}
+#micBtn{
+  width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;flex:none;
+  background:var(--acc);color:#031b20;display:grid;place-items:center;transition:.2s;
+  box-shadow:0 0 14px var(--acc-glow);
+}
+#micBtn:hover{transform:scale(1.07);box-shadow:0 0 22px var(--acc-glow)}
+#micBtn.recording{animation:micPulse 1.2s ease-out infinite}
+@keyframes micPulse{
+  0%{box-shadow:0 0 0 0 rgba(0,229,255,.55),0 0 18px var(--acc-glow)}
+  100%{box-shadow:0 0 0 16px rgba(0,229,255,0),0 0 18px var(--acc-glow)}
+}
+#micBtn svg{fill:#031b20}
+#waveWrap{width:34px;height:34px;transition:width .3s ease;overflow:hidden;flex:none;display:grid;place-items:center}
+#voiceAssistant.active #waveWrap{width:140px}
+#waveCanvas{width:140px;height:34px}
+#voiceStatus{
+  font-size:11px;color:var(--dim);min-width:120px;max-width:300px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#voiceAssistant.listening #voiceStatus,
+#voiceAssistant.speaking #voiceStatus{color:var(--acc)}
+#ttsToggle{
+  width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;
+  color:var(--dim);cursor:pointer;display:grid;place-items:center;flex:none;transition:.2s;
+}
+#ttsToggle:hover{color:var(--acc);border-color:var(--acc);box-shadow:0 0 10px var(--acc-glow)}
+#ttsToggle svg{fill:currentColor}
+#ttsToggle .off{display:none}
+#ttsToggle.muted .on{display:none}
+#ttsToggle.muted .off{display:block}
+
+@media (max-width:860px){
+  #voiceAssistant{bottom:calc(50px + env(safe-area-inset-bottom))}
+  #cornerNote{display:none}
+  #voiceStatus{min-width:56px;max-width:150px;font-size:10px}
+  #voicePill{gap:8px;padding:6px 10px 6px 6px}
+  .v-chip{padding:4px 9px;font-size:9.5px}
+  #badge{display:none}
+  #statusBtn{display:block}
+  .brand b{font-size:11px}
+  .brand small{display:none}
+  #viewControls{width:206px}
+  body.left-open #viewControls{left:12px}
+  #cornerNote{max-width:230px;font-size:9px}
+  .tb-btn{padding:6px 10px}
+}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<header id="toolbar">
+  <div class="brand">
+    <div class="brand-badge">F</div>
+    <div><b>FinFET CMOS INVERTER</b><small>3D LAYOUT EXPLORER</small></div>
+  </div>
+  <div class="seg" id="modeSeg">
+    <button data-v="physical" class="on">PHYSICAL</button><button data-v="schematic">SCHEMATIC</button>
+  </div>
+  <div class="seg" id="inSeg">
+    <button data-v="0" class="on">IN = 0</button><button data-v="1">IN = 1</button>
+  </div>
+  <div class="seg" id="flowSeg">
+    <button data-v="current" class="on">CURRENT</button><button data-v="electrons">ELECTRONS</button>
+  </div>
+  <button id="resetBtn" class="tb-btn">RESET</button>
+</header>
+
+<div id="viewport">
+  <canvas id="c"></canvas>
+
+  <div id="schematic" hidden>
+    <div class="sch-wrap">
+      <div class="sch-title">CMOS INVERTER — SCHEMATIC (click any element to jump to its 3D structure)</div>
+      <svg viewBox="0 0 640 720" aria-label="CMOS inverter schematic">
+        <g id="sch-vdd" class="hit">
+          <rect x="250" y="52" width="230" height="36"/>
+          <line x1="255" y1="70" x2="465" y2="70" stroke="#ff4d4d" stroke-width="5" stroke-linecap="round"/>
+          <text x="478" y="76" fill="#ff4d4d" font-size="20" font-weight="bold">VDD</text>
+        </g>
+        <g id="sch-gnd" class="hit">
+          <rect x="250" y="632" width="230" height="36"/>
+          <line x1="255" y1="650" x2="465" y2="650" stroke="#5a6570" stroke-width="5" stroke-linecap="round"/>
+          <text x="478" y="656" fill="#9fb0bd" font-size="20" font-weight="bold">GND</text>
+        </g>
+        <g id="sch-in" class="hit">
+          <rect x="60" y="238" width="256" height="244"/>
+          <line x1="100" y1="250" x2="292" y2="250" stroke="#ffcc00" stroke-width="4" stroke-linecap="round"/>
+          <line x1="150" y1="250" x2="150" y2="470" stroke="#ffcc00" stroke-width="4"/>
+          <line x1="150" y1="470" x2="310" y2="470" stroke="#ffcc00" stroke-width="4" stroke-linecap="round"/>
+          <text x="62" y="240" fill="#ffcc00" font-size="20" font-weight="bold">IN</text>
+        </g>
+        <g id="sch-out" class="hit">
+          <rect x="352" y="280" width="176" height="164"/>
+          <line x1="360" y1="285" x2="360" y2="435" stroke="#00f5a0" stroke-width="4"/>
+          <line x1="360" y1="380" x2="500" y2="380" stroke="#00f5a0" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="360" cy="380" r="5" fill="#00f5a0"/>
+          <text x="510" y="386" fill="#00f5a0" font-size="20" font-weight="bold">OUT</text>
+        </g>
+        <g id="sch-pmos" class="hit">
+          <rect x="292" y="192" width="110" height="124"/>
+          <line x1="360" y1="70" x2="360" y2="215" stroke="#c9d1d9" stroke-width="4"/>
+          <line x1="330" y1="215" x2="360" y2="215" stroke="#c9d1d9" stroke-width="4"/>
+          <line x1="330" y1="285" x2="360" y2="285" stroke="#c9d1d9" stroke-width="4"/>
+          <line x1="330" y1="215" x2="330" y2="285" stroke="#d4a359" stroke-width="7" stroke-linecap="round"/>
+          <line x1="312" y1="219" x2="312" y2="281" stroke="#9e2a2b" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="300" cy="250" r="8" fill="none" stroke="#9e2a2b" stroke-width="3.5"/>
+          <text x="300" y="192" fill="#e6edf3" font-size="16" font-weight="bold" text-anchor="middle">PMOS</text>
+        </g>
+        <g id="sch-nmos" class="hit">
+          <rect x="292" y="412" width="110" height="124"/>
+          <line x1="360" y1="505" x2="360" y2="650" stroke="#c9d1d9" stroke-width="4"/>
+          <line x1="330" y1="435" x2="360" y2="435" stroke="#c9d1d9" stroke-width="4"/>
+          <line x1="330" y1="505" x2="360" y2="505" stroke="#c9d1d9" stroke-width="4"/>
+          <line x1="330" y1="435" x2="330" y2="505" stroke="#d4a359" stroke-width="7" stroke-linecap="round"/>
+          <line x1="310" y1="439" x2="310" y2="501" stroke="#9e2a2b" stroke-width="5" stroke-linecap="round"/>
+          <text x="300" y="540" fill="#e6edf3" font-size="16" font-weight="bold" text-anchor="middle">NMOS</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div id="badge" class="hud">
+    <span class="b-chip" id="bIn">IN 0</span>
+    <span class="b-chip" id="bP">PMOS ON</span>
+    <span class="b-chip" id="bN">NMOS OFF</span>
+    <span class="b-chip" id="bOut">OUT 1</span>
+    <div class="b-note">Logical / behavioral visualization — not a transistor-level physical simulation.</div>
+  </div>
+  <button id="statusBtn" class="hud">STATUS</button>
+  <div id="statusPop" class="hud panel"></div>
+
+  <section id="viewControls" class="hud panel">
+    <div class="vc-h" id="vcHead"><span>VIEW CONTROLS</span><span class="caret">–</span></div>
+    <div class="vc-b">
+      <label class="vc-l">EXPLODE <span id="explodeVal">1%</span>
+        <input type="range" id="explodeRange" min="0" max="100" value="1"></label>
+      <label class="vc-l">SCRUB X
+        <input type="range" id="scrubX" min="0" max="1000" value="1000"></label>
+      <label class="vc-l">SCRUB Y
+        <input type="range" id="scrubY" min="0" max="1000" value="1000"></label>
+      <label class="vc-l">SCRUB Z
+        <input type="range" id="scrubZ" min="0" max="1000" value="1000"></label>
+    </div>
+  </section>
+
+  <div id="cornerNote" class="hud">
+    Dimensions & spacings are illustrative and λ-scaled — not a specific fabricated PDK.
+    Vertical scale is exaggerated for visibility; the layer topology (fin → STI → wrap-around gate →
+    spacer → epi S/D → contact → Metal-1) is physically meaningful.
+  </div>
+
+  <div id="popover" hidden>
+    <button id="popClose" aria-label="Close">×</button>
+    <div id="popInner"></div>
+    <div class="pop-arrow"></div>
+  </div>
+</div>
+
+<aside id="leftDrawer" class="drawer">
+  <button class="grip" id="gripL" aria-label="Toggle left panel">
+    <svg width="10" height="30" viewBox="0 0 10 30"><circle cx="5" cy="5" r="2.2"/><circle cx="5" cy="15" r="2.2"/><circle cx="5" cy="25" r="2.2"/></svg>
+  </button>
+  <div class="drawer-inner">
+    <section class="sec" id="secLayers">
+      <div class="sec-h">LAYER VISIBILITY <span class="caret">–</span></div>
+      <div class="sec-b" id="layerList"></div>
+    </section>
+    <section class="sec" id="secLegend">
+      <div class="sec-h">LAYER LEGEND <span class="caret">–</span></div>
+      <div class="sec-b" id="legendList"></div>
+    </section>
+    <section class="sec" id="secLambda">
+      <div class="sec-h">λ DIMENSIONS <span class="caret">–</span></div>
+      <div class="sec-b">
+        <select id="lambdaSel">
+          <option value="1000">1000 nm (illustrative)</option>
+          <option value="350">350 nm</option>
+          <option value="130" selected>130 nm</option>
+          <option value="90">90 nm</option>
+          <option value="45">45 nm</option>
+          <option value="16">16 nm</option>
+        </select>
+        <table class="ltable" id="lambdaTable"></table>
+        <div class="note">Every physical dimension is a multiple of λ; values below update with the
+        selected process node. Illustrative only — not a real PDK.</div>
+      </div>
+    </section>
+  </div>
+</aside>
+
+<aside id="rightDrawer" class="drawer">
+  <button class="grip" id="gripR" aria-label="Toggle right panel">
+    <svg width="10" height="30" viewBox="0 0 10 30"><circle cx="5" cy="5" r="2.2"/><circle cx="5" cy="15" r="2.2"/><circle cx="5" cy="25" r="2.2"/></svg>
+  </button>
+  <div class="drawer-inner">
+    <section class="sec" id="secInspector">
+      <div class="sec-h">PROPERTY INSPECTOR <span class="caret">–</span></div>
+      <div class="sec-b" id="inspectorBody"></div>
+    </section>
+    <section class="sec" id="secTree">
+      <div class="sec-h">ARCHITECTURE TREE <span class="caret">–</span></div>
+      <div class="sec-b tree" id="treeBody">
+        <ul>
+          <li class="t-root">FINFET CMOS INVERTER
+            <ul>
+              <li class="t-sec">WAFER STACK
+                <ul>
+                  <li data-cid="substrate">P-substrate</li>
+                  <li data-cid="nwell">N-well (frosted glass)</li>
+                  <li data-cid="sti">STI oxide</li>
+                </ul></li>
+              <li class="t-sec">PMOS — PULL-UP
+                <ul>
+                  <li data-cid="pmos">Device overview</li>
+                  <li data-cid="fin-p">Fin body</li>
+                  <li data-cid="gateoxide-p">Gate oxide wrap</li>
+                  <li data-cid="spacer-p">Gate spacers</li>
+                  <li data-cid="epi-p-s">Source epi → VDD</li>
+                  <li data-cid="epi-p-d">Drain epi → OUT</li>
+                </ul></li>
+              <li class="t-sec">NMOS — PULL-DOWN
+                <ul>
+                  <li data-cid="nmos">Device overview</li>
+                  <li data-cid="fin-n">Fin body</li>
+                  <li data-cid="gateoxide-n">Gate oxide wrap</li>
+                  <li data-cid="spacer-n">Gate spacers</li>
+                  <li data-cid="epi-n-s">Source epi → GND</li>
+                  <li data-cid="epi-n-d">Drain epi → OUT</li>
+                </ul></li>
+              <li class="t-sec">GATE (SHARED INPUT)
+                <ul>
+                  <li data-cid="gate">Wrap-around gate strip</li>
+                  <li data-cid="contact-g">Gate contact</li>
+                </ul></li>
+              <li class="t-sec">CONTACTS & METAL-1
+                <ul>
+                  <li data-cid="contact-ps">PMOS source contact</li>
+                  <li data-cid="contact-pd">PMOS drain contact</li>
+                  <li data-cid="contact-ns">NMOS source contact</li>
+                  <li data-cid="contact-nd">NMOS drain contact</li>
+                  <li data-cid="metal-vdd">VDD rail</li>
+                  <li data-cid="metal-gnd">GND rail</li>
+                  <li data-cid="metal-in">IN net</li>
+                  <li data-cid="metal-out">OUT net</li>
+                </ul></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</aside>
+
+<div id="voiceAssistant">
+  <div id="voiceChips">
+    <button class="v-chip" data-q="Explain the tri-gate wrap">Explain the Tri-Gate Wrap</button>
+    <button class="v-chip" data-q="How does current flow in IN = 0">How does current flow in IN=0?</button>
+    <button class="v-chip" data-q="What is shallow trench isolation">What is Shallow Trench Isolation?</button>
+  </div>
+  <div id="voicePill">
+    <button id="micBtn" aria-label="Ask a voice question" title="Ask a voice question">
+      <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+    </button>
+    <div id="waveWrap"><canvas id="waveCanvas" width="280" height="68"></canvas></div>
+    <div id="voiceStatus">Tap to ask about any layer…</div>
+    <button id="ttsToggle" aria-label="Mute or unmute voice responses" title="Mute / unmute responses">
+      <svg class="on" width="16" height="16" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+      <svg class="off" width="16" height="16" viewBox="0 0 24 24"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.9 8.9 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>
+    </button>
+  </div>
+</div>
+
+<footer id="foot">
+  <a class="badge-circle" href="https://www.linkedin.com/in/anish-raydurg/" target="_blank" rel="noopener" title="Anish Raydurg — portfolio">AR</a>
+  <span>FinFET CMOS Inverter — 3D layout explorer · built by
+    <a href="https://www.linkedin.com/in/anish-raydurg/" target="_blank" rel="noopener">Anish Raydurg</a></span>
+  <a class="gh" style="margin-left:auto" href="https://github.com/anish609609" target="_blank" rel="noopener" aria-label="GitHub">
+    <svg width="20" height="20" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+  </a>
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* =====================================================================
+   LAYOUT CONSTANTS — every number below is in λ (scene units = λ).
+   Named, single-source-of-truth constants so the geometry stays
+   provably self-consistent (hard rule from the spec).
+   Plan view: fins run along X, gate strip runs along Y, Z is up.
+     PMOS fin at y=+7 (inside N-well), NMOS fin at y=-7 (substrate).
+   Metal-1 plan-view overlap audit (same-layer cross-net short check):
+     VDD rail y∈[20,24]        x∈[-48,48]
+     GND rail y∈[-24,-20]      x∈[-48,48]
+     VDD branch x∈[-10,-6]  y∈[5.5,20]   (touches rail edge only — same net)
+     GND branch x∈[-10,-6]  y∈[-20,-5.5] (touches rail edge only — same net)
+     OUT branch x∈[6,10]    y∈[-8.5,8.5] (no rail contact)
+     IN pad     x∈[-2.5,2.5] y∈[11.5,16.5] (no rail contact)
+   => no two different Metal-1 nets share footprint area. ✓
+   Crossings that DO exist are between different layers (gate / silicon
+   under metal), which is realistic and allowed.
+   ===================================================================== */
+const C = {
+  die:   { hx: 55, hy: 45, zTop: 0, zBot: -12 },            // substrate slab (die dwarfs the cell)
+  nwell: { hx: 48, y0: 1.5, y1: 42, z0: -7, z1: 3.8 },       // glass well on the PMOS side
+  sti:   { z0: 0, z1: 3 },                                    // recessed oxide, full-die
+  fin:   { halfW: 1, z0: -2, z1: 9, hx: 16, yP: 7, yN: -7, pitch: 14 },
+  gate:  { hx: 3, wallT: 1.6, z0: 3, z1: 9.45, capZ0: 9.45, capZ1: 10.6, y0: -13, y1: 16, tailCY: 14 },
+  gox:   { t: 0.45, z0: 2.7, z1: 9.45 },                      // gate oxide wrap thickness
+  spacer:{ w: 1.5, hy: 2.2, z0: 2.2, z1: 10.4 },
+  epi:   { hy: 3, z0: 1, z1: 10, xIn: 4.5, xOut: 13 },        // abuts spacer at x=±4.5 — zero gap
+  contact:{ hs: 1.5, zTop: 12 },
+  metal: { z0: 12, z1: 14, w: 4, hx: 48 },
+  railY: { vdd: 22, gnd: -22 },
+  contacts: { ps: [-8, 7], pd: [8, 7], ns: [-8, -7], nd: [8, -7], g: [0, 14] },
+  explodeStep: 18
+};
+const FINS = [C.fin.yP, C.fin.yN]; // PMOS first, NMOS second
+
+/* =====================================================================
+   APP STATE
+   ===================================================================== */
+const state = { lambda: 130, in: 0, flow: 'current', mode: 'physical', explode: 0.01, selected: null };
+
+/* =====================================================================
+   RENDERER / SCENE / CAMERA / LIGHTS
+   ===================================================================== */
+const canvasEl = $('#c');
+const renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+renderer.localClippingEnabled = true;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1117);
+scene.fog = new THREE.FogExp2(0x0d1117, 0.0011);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 4000);
+camera.up.set(0, 0, 1);
+camera.position.set(132, -78, 96);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 4);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 15;
+controls.maxDistance = 900;
+/* no polar-angle restriction: you can orbit underneath the model */
+
+/* environment map so the frosted-glass N-well actually refracts */
+try {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
+} catch (e) { console.warn('PMREM environment unavailable:', e); }
+
+/* studio lighting: warm-ish top key, cool side fill, subtle rim */
+const hemi = new THREE.HemisphereLight(0xbcd8ee, 0x14181f, 0.5);
+hemi.position.set(0, 0, 1);
+scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 1.15);
+key.position.set(80, -70, 150);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = -120; key.shadow.camera.right = 120;
+key.shadow.camera.top = 120;   key.shadow.camera.bottom = -120;
+key.shadow.camera.near = 20;   key.shadow.camera.far = 450;
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.6;
+scene.add(key);
+const fillLight = new THREE.DirectionalLight(0x7aa5c9, 0.5);
+fillLight.position.set(-130, 40, 60);
+scene.add(fillLight);
+const rimLight = new THREE.DirectionalLight(0xb9d7ff, 0.35);
+rimLight.position.set(30, 140, 80);
+scene.add(rimLight);
+
+/* fine slate-blue ground grid, under the die */
+const grid = new THREE.GridHelper(620, 124, 0x2b3b4f, 0x1a2430);
+grid.rotation.x = Math.PI / 2;
+grid.position.z = -13.5;
+scene.add(grid);
+
+/* =====================================================================
+   SECTION SCRUB — always-on clipping planes on all three axes.
+   (Sprites/labels are deliberately NOT clipped.)
+   ===================================================================== */
+const planes = {
+  x: new THREE.Plane(new THREE.Vector3(-1, 0, 0), 1e6),
+  y: new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e6),
+  z: new THREE.Plane(new THREE.Vector3(0, 0, -1), 1e6)
+};
+const clipPlanes = [planes.x, planes.y, planes.z];
+function CP(m) { m.clippingPlanes = clipPlanes; return m; }
+
+/* =====================================================================
+   MATERIALS (spec section 5, applied literally).
+   Palette-audit note: NOTHING in the palette is near the selection
+   accent #00e5ff — gate oxide is pale ice (#cdeef5, near-white),
+   OUT is mint GREEN (#00f5a0), so cyan stays unambiguous for selection.
+   ===================================================================== */
+function std(color, roughness = 0.5, metalness = 0, extra = {}) {
+  return CP(new THREE.MeshStandardMaterial(Object.assign({ color, roughness, metalness }, extra)));
+}
+const M = {};
+M.subTop  = std(0xff2a85, 0.70);          // vibrant magenta-pink silicon
+M.subSide = std(0xd11b6d, 0.75);          // darker shadowed faces
+M.nwell = CP(new THREE.MeshPhysicalMaterial({           // real frosted glass
+  color: 0xe0f7fa, transmission: 0.85, roughness: 0.25, thickness: 0.5, ior: 1.45
+}));
+M.sti     = std(0x3d4c5e, 0.6);
+function epiMat()  { return std(0xd4a359, 0.55); }       // golden-amber Si
+function goxMat()  { return CP(new THREE.MeshPhysicalMaterial({
+  color: 0xcdeef5, transparent: true, opacity: 0.55, roughness: 0.08, metalness: 0 })); }
+function spacerMat(){ return std(0x8ba0b5, 0.4); }
+function contactMat(){ return std(0x222222, 0.3, 0.6); } // near-black brushed metal
+M.gateTop  = std(0x9e2a2b, 0.5);
+M.gateSide = std(0x8b0000, 0.5);
+M.vdd = std(0xff4d4d, 0.35, 0.55);       // signal red
+M.gnd = std(0x2f3437, 0.35, 0.55);       // dark slate (light border drawn as edges)
+M.inn = std(0xffcc00, 0.35, 0.55);       // mustard
+M.out = std(0x00f5a0, 0.35, 0.55);        // mint
+M.finP = epiMat(); M.finN = epiMat();
+M.goxP = goxMat(); M.goxN = goxMat();
+M.spP = spacerMat(); M.spN = spacerMat();
+M.epiPS = epiMat(); M.epiPD = epiMat(); M.epiNS = epiMat(); M.epiND = epiMat();
+M.cPS = contactMat(); M.cPD = contactMat(); M.cNS = contactMat(); M.cND = contactMat(); M.cG = contactMat();
+
+const subMats  = [M.subSide, M.subSide, M.subSide, M.subSide, M.subTop,  M.subSide];
+const gateMats = [M.gateSide, M.gateSide, M.gateSide, M.gateSide, M.gateTop, M.gateSide];
+
+/* =====================================================================
+   LAYER GROUPS + EXPLODE ORDER
+   (STI 1 → fin 2 (+epi 2.25) → gate-oxide 3 → gate 4 → spacer 5 →
+    contact 6 → metal 7; substrate 0, N-well 0.45)
+   ===================================================================== */
+const G = {};
+['substrate','nwell','sti','fin','epi','gateoxide','gate','spacer','contact','metal','flow']
+  .forEach(k => { G[k] = new THREE.Group(); scene.add(G[k]); });
+['vdd','gnd','in','out'].forEach(k => { G[k] = new THREE.Group(); G.metal.add(G[k]); });
+const EXPLODE = [
+  ['substrate', 0], ['nwell', 0.45], ['sti', 1], ['fin', 2], ['epi', 2.25],
+  ['gateoxide', 3], ['gate', 4], ['spacer', 5], ['contact', 6], ['metal', 7]
+];
+
+/* =====================================================================
+   GEOMETRY BUILD
+   ===================================================================== */
+const pickMeshes = [];
+const meshesOf = {};
+function add(cid, mesh, cast = false, recv = false) {
+  mesh.userData.cid = cid;
+  (meshesOf[cid] || (meshesOf[cid] = [])).push(mesh);
+  if (cast) mesh.castShadow = true;
+  if (recv) mesh.receiveShadow = true;
+  pickMeshes.push(mesh);
+  return mesh;
+}
+function box(sx, sy, sz, x, y, z, mat, cast = false, recv = false) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+  m.position.set(x, y, z);
+  if (cast) m.castShadow = true;
+  if (recv) m.receiveShadow = true;
+  return m;
+}
+
+/* --- substrate (opaque magenta, die much larger than the device) --- */
+G.substrate.add(add('substrate',
+  box(2 * C.die.hx, 2 * C.die.hy, C.die.zTop - C.die.zBot, 0, 0, (C.die.zTop + C.die.zBot) / 2, subMats, false, true)));
+
+/* --- N-well: frosted-glass tub for the PMOS + emissive rim outline --- */
+const wellGeo = new THREE.BoxGeometry(2 * C.nwell.hx, C.nwell.y1 - C.nwell.y0, C.nwell.z1 - C.nwell.z0);
+const wellMesh = add('nwell', new THREE.Mesh(wellGeo, M.nwell));
+wellMesh.position.set(0, (C.nwell.y0 + C.nwell.y1) / 2, (C.nwell.z0 + C.nwell.z1) / 2);
+G.nwell.add(wellMesh);
+const wellRim = new THREE.LineSegments(
+  new THREE.EdgesGeometry(wellGeo),
+  CP(new THREE.LineBasicMaterial({ color: 0x9fe8f5, transparent: true, opacity: 0.55 }))
+);
+wellRim.position.copy(wellMesh.position);
+G.nwell.add(wellRim);
+
+/* --- STI: recessed oxide over the whole die top --- */
+G.sti.add(add('sti',
+  box(2 * C.die.hx, 2 * C.die.hy, C.sti.z1 - C.sti.z0, 0, 0, (C.sti.z0 + C.sti.z1) / 2, M.sti, false, true)));
+
+/* --- fins: thin tall silicon rising OUT of the STI (base buried in substrate) --- */
+FINS.forEach((fy, i) => {
+  const f = box(2 * C.fin.hx, 2 * C.fin.halfW, C.fin.z1 - C.fin.z0, 0, fy, (C.fin.z0 + C.fin.z1) / 2, i === 0 ? M.finP : M.finN, true, true);
+  G.fin.add(add(i === 0 ? 'fin-p' : 'fin-n', f));
+});
+
+/* --- gate oxide: 0.45λ shell hugging the fin on both sidewalls + top --- */
+FINS.forEach((fy, i) => {
+  const mat = i === 0 ? M.goxP : M.goxN, cid = i === 0 ? 'gateoxide-p' : 'gateoxide-n';
+  const hz = C.gox.z1 - C.gox.z0, zc = (C.gox.z0 + C.gox.z1) / 2;
+  [[1], [-1]].forEach(([s]) => {
+    G.gateoxide.add(add(cid,
+      box(2 * C.gate.hx, C.gox.t, hz, 0, fy + s * (C.fin.halfW + C.gox.t / 2), zc, mat)));
+  });
+  G.gateoxide.add(add(cid,
+    box(2 * C.gate.hx, 2 * (C.fin.halfW + C.gox.t), C.gox.t, 0, fy, C.fin.z1 + C.gox.t / 2, mat)));
+});
+
+/* --- gate: ONE continuous wrap-around strip crossing both fins ---
+   bar segments between the fin wraps + full-width cap + wrap walls at
+   each fin (side walls hug the oxide; cap closes over the fin top). */
+{
+  const gz = C.gate.z1 - C.gate.z0, gzc = (C.gate.z0 + C.gate.z1) / 2;
+  const wrapHalf = C.fin.halfW + C.gox.t + C.gate.wallT; // 3.05
+  const segs = [
+    [C.gate.y0,            FINS[1] - wrapHalf],
+    [FINS[1] + wrapHalf,   FINS[0] - wrapHalf],
+    [FINS[0] + wrapHalf,   C.gate.y1]
+  ];
+  segs.forEach(([a, b]) => {
+    G.gate.add(add('gate', box(2 * C.gate.hx, b - a, gz, 0, (a + b) / 2, gzc, gateMats, true, true)));
+  });
+  /* continuous cap over the whole strip (one connected form) */
+  G.gate.add(add('gate', box(2 * C.gate.hx, C.gate.y1 - C.gate.y0, C.gate.capZ1 - C.gate.capZ0,
+    0, (C.gate.y0 + C.gate.y1) / 2, (C.gate.capZ0 + C.gate.capZ1) / 2, gateMats, true, true)));
+  /* tri-gate wrap walls at each fin */
+  FINS.forEach(fy => {
+    [[1], [-1]].forEach(([s]) => {
+      G.gate.add(add('gate',
+        box(2 * C.gate.hx, C.gate.wallT, gz, 0, fy + s * (C.fin.halfW + C.gox.t + C.gate.wallT / 2), gzc, gateMats, true, true)));
+    });
+  });
+}
+
+/* --- gate spacers: thin dielectric flanking the gate, epi abuts them --- */
+FINS.forEach((fy, i) => {
+  const mat = i === 0 ? M.spP : M.spN, cid = i === 0 ? 'spacer-p' : 'spacer-n';
+  const hz = C.spacer.z1 - C.spacer.z0, zc = (C.spacer.z0 + C.spacer.z1) / 2;
+  [[1], [-1]].forEach(([s]) => {
+    G.spacer.add(add(cid,
+      box(C.spacer.w, 2 * C.spacer.hy, hz, s * (C.gate.hx + C.spacer.w / 2), fy, zc, mat, true, false)));
+  });
+});
+
+/* --- raised epitaxial S/D, wider than the fin, abutting the spacer (x=±4.5) --- */
+const EPI = [
+  ['epi-p-s', FINS[0], -1, M.epiPS], ['epi-p-d', FINS[0], 1, M.epiPD],
+  ['epi-n-s', FINS[1], -1, M.epiNS], ['epi-n-d', FINS[1], 1, M.epiND]
+];
+EPI.forEach(([cid, fy, s, mat]) => {
+  const len = C.epi.xOut - C.epi.xIn, xc = s * (C.epi.xIn + len / 2);
+  G.epi.add(add(cid, box(len, 2 * C.epi.hy, C.epi.z1 - C.epi.z0, xc, fy, (C.epi.z0 + C.epi.z1) / 2, mat, true, true)));
+});
+
+/* --- contacts: discrete vertical vias (never metal on silicon) --- */
+const CONTACTS = [
+  ['contact-ps', C.contacts.ps, M.cPS, C.epi.z1],
+  ['contact-pd', C.contacts.pd, M.cPD, C.epi.z1],
+  ['contact-ns', C.contacts.ns, M.cNS, C.epi.z1],
+  ['contact-nd', C.contacts.nd, M.cND, C.epi.z1],
+  ['contact-g',  C.contacts.g,  M.cG,  C.gate.capZ1]
+];
+CONTACTS.forEach(([cid, [cx, cy], mat, zBot]) => {
+  G.contact.add(add(cid,
+    box(2 * C.contact.hs, 2 * C.contact.hs, C.contact.zTop - zBot, cx, cy, (zBot + C.contact.zTop) / 2, mat, true, false)));
+});
+
+/* --- Metal-1 nets --- */
+{
+  const mz = C.metal.z1 - C.metal.z0, zc = (C.metal.z0 + C.metal.z1) / 2;
+  /* VDD rail + branch down to the PMOS source contact */
+  G.vdd.add(add('metal-vdd', box(2 * C.metal.hx, C.metal.w, mz, 0, C.railY.vdd, zc, M.vdd, true, false)));
+  G.vdd.add(add('metal-vdd', box(C.metal.w, C.railY.vdd - (FINS[0] - 1.5), mz,
+    C.contacts.ps[0], (FINS[0] - 1.5 + C.railY.vdd) / 2, zc, M.vdd, true, false)));
+  /* GND rail (+ light border) + branch down to the NMOS source contact */
+  const gndRail = box(2 * C.metal.hx, C.metal.w, mz, 0, C.railY.gnd, zc, M.gnd, true, false);
+  G.gnd.add(add('metal-gnd', gndRail));
+  const gndEdge = new THREE.LineSegments(
+    new THREE.EdgesGeometry(gndRail.geometry),
+    CP(new THREE.LineBasicMaterial({ color: 0x9fb0bd, transparent: true, opacity: 0.7 }))
+  );
+  gndEdge.position.copy(gndRail.position);
+  G.gnd.add(gndEdge);
+  G.gnd.add(add('metal-gnd', box(C.metal.w, (FINS[1] + 1.5) - C.railY.gnd, mz,
+    C.contacts.ns[0], (FINS[1] + 1.5 + C.railY.gnd) / 2, zc, M.gnd, true, false)));
+  /* IN pad over the gate-contact tail */
+  G.in.add(add('metal-in', box(5, 5, mz, C.contacts.g[0], C.contacts.g[1], zc, M.inn, true, false)));
+  /* OUT branch linking both drain contacts */
+  G.out.add(add('metal-out', box(C.metal.w, 2 * (FINS[0] + 1.5), mz,
+    C.contacts.pd[0], 0, zc, M.out, true, false)));
+}
+
+/* =====================================================================
+   LABELS — billboarded canvas sprites, parented to their layer group so
+   they ride the Explode animation correctly.
+   ===================================================================== */
+const allLabels = [];
+function makeLabel(text, cssColor, h = 4.2, opacity = 0.95) {
+  const cv = document.createElement('canvas');
+  const font = 'bold 52px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  let ctx = cv.getContext('2d');
+  ctx.font = font;
+  const tw = ctx.measureText(text).width;
+  cv.width = Math.ceil(tw + 56); cv.height = 116;
+  ctx = cv.getContext('2d');
+  ctx.font = font;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = cssColor; ctx.shadowBlur = 16;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(4,8,14,0.92)'; ctx.lineWidth = 9;
+  ctx.strokeText(text, cv.width / 2, cv.height / 2);
+  ctx.fillStyle = cssColor;
+  ctx.fillText(text, cv.width / 2, cv.height / 2);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity, depthTest: false }));
+  sp.scale.set(h * cv.width / cv.height, h, 1);
+  sp.renderOrder = 999;
+  allLabels.push(sp);
+  return sp;
+}
+[
+  ['SUBSTRATE',            '#ff6aa5', G.substrate, [-45, -38, -3],   4.2],
+  ['N-WELL',               '#cdeef5', G.nwell,      [46, 40, 8],      4.2],
+  ['STI',                  '#7f93aa', G.sti,        [42, -38, 4.5],   4.2],
+  ['FIN',                  '#ffd28f', G.fin,        [18.5, 8.5, 6],  4.2],
+  ['GATE OXIDE',           '#cdeef5', G.gateoxide,  [0, -7, 12.6],    4.2],
+  ['GATE (WRAP-AROUND)',   '#e06a6a', G.gate,       [0, 7, 14.2],     4.2],
+  ['SPACER',               '#a9bdd2', G.spacer,     [4.2, 11.5, 10.8],4.0],
+  ['SOURCE / DRAIN EPI',   '#ffd28f', G.epi,        [-13, 12, 10.5],  4.2],
+  ['CONTACT',              '#c9d1d9', G.contact,    [-8, -11.8, 12.4],4.2],
+  ['METAL-1',              '#aeb9c4', G.metal,      [32, -22, 17],    4.2],
+  ['VDD',                  '#ff4d4d', G.vdd,        [-36, 22, 17],    5.2],
+  ['GND',                  '#9fb0bd', G.gnd,        [-36, -22, 17],   5.2],
+  ['IN',                   '#ffcc00', G.in,          [0, 14, 18],      5.2],
+  ['OUT',                  '#00f5a0', G.out,         [14, 0, 17.5],    5.2]
+].forEach(([t, c, g, p, h]) => {
+  const s = makeLabel(t, c, h);
+  s.position.set(p[0], p[1], p[2]);
+  g.add(s);
+});
+
+/* =====================================================================
+   COMPONENT REGISTRY — id-based mapping shared by 3D view, schematic,
+   popover, inspector and architecture tree.
+   ===================================================================== */
+const COMP = {
+  'substrate': {
+    name: 'P-Type Substrate', cat: 'WAFER / DIE',
+    func: 'Foundation slab of the die — mechanical support and the common bulk domain.',
+    role: 'P-type body/bulk of the NMOS FinFET; hosts the N-well.',
+    conn: 'Lies beneath the N-well, STI and every device. Bulk domain is tied to GND.',
+    phys: 'Every layer is grown on or etched into this slab. The die deliberately dwarfs the single inverter cell, as on a real die.',
+    doping: 'Boron ≈ 1×10¹⁵ cm⁻³ (illustrative)',
+    dims: [['Die length', 110], ['Die width', 90], ['Thickness', 12]]
+  },
+  'nwell': {
+    name: 'N-Well', cat: 'WAFER / DIE',
+    func: 'N-type tub fabricated into the P-substrate to host the PMOS FinFET.',
+    role: 'Body/bulk of the PMOS — lets a P-channel form without shorting source to drain.',
+    conn: 'Contains the PMOS fin and its source/drain epi; boundary runs between the two transistor rows.',
+    phys: 'Rendered as real frosted glass (transmission 0.85) — the PMOS half of the cell lives inside it, the NMOS outside it.',
+    doping: 'Phosphorus ≈ 3×10¹⁷ cm⁻³ (illustrative)',
+    dims: [['Length', 96], ['Width', 40.5], ['Depth', 10.8]]
+  },
+  'sti': {
+    name: 'Shallow Trench Isolation (STI)', cat: 'DIELECTRIC',
+    func: 'Recessed oxide that electrically isolates neighbouring devices and defines where fins may emerge.',
+    role: 'Dielectric barrier — no conduction. Everything except the fins is buried under it.',
+    conn: 'Covers the whole die top; fins and epi poke through it; the gate strip runs across its surface.',
+    phys: 'Fins rise out of it with their bases embedded — the classic "fin out of oxide" silhouette.',
+    doping: 'None — SiO₂ dielectric',
+    dims: [['Thickness', 3], ['Coverage', 'full die']]
+  },
+  'fin-p': {
+    name: 'PMOS Fin (Body)', cat: 'DEVICE / PMOS',
+    func: 'The transistor body — a thin, tall silicon fin. The channel forms on its two sidewalls and its top.',
+    role: 'Channel region of the PMOS under the wrap-around gate; its two ends are the source and drain.',
+    conn: 'Ends merge into the raised S/D epi; wrapped by gate oxide + gate between the spacers; rises out of the STI inside the N-well.',
+    phys: 'Fin tips are left visible beyond the epi so the fin silhouette reads clearly. Vertical scale exaggerated for visibility.',
+    doping: 'P-type ≈ 1×10¹⁸ cm⁻³ inside N-well (illustrative)',
+    dims: [['Width', 2], ['Height above STI', 6], ['Length', 32], ['Fin pitch', 14]]
+  },
+  'fin-n': {
+    name: 'NMOS Fin (Body)', cat: 'DEVICE / NMOS',
+    func: 'The transistor body — a thin, tall silicon fin. The channel forms on its two sidewalls and its top.',
+    role: 'Channel region of the NMOS under the wrap-around gate; its two ends are the source and drain.',
+    conn: 'Ends merge into the raised S/D epi; wrapped by gate oxide + gate between the spacers; rises out of the STI in the plain substrate.',
+    phys: 'Twin of the PMOS fin, mirrored across the N-well boundary at y≈0.',
+    doping: 'N-type ≈ 1×10¹⁸ cm⁻³ (illustrative)',
+    dims: [['Width', 2], ['Height above STI', 6], ['Length', 32], ['Fin pitch', 14]]
+  },
+  'gateoxide-p': {
+    name: 'Gate Oxide (PMOS)', cat: 'DIELECTRIC',
+    func: 'Ultra-thin dielectric wrapping the PMOS fin on three faces beneath the gate.',
+    role: 'Capacitive coupling — the gate field inverts the fin surfaces through it.',
+    conn: 'Sits exactly between the fin surfaces and the gate wrap walls.',
+    phys: 'Shown as a translucent ice-blue sheet, only 0.45 λ thick.',
+    doping: '— (gate dielectric)',
+    dims: [['Thickness', 0.45]]
+  },
+  'gateoxide-n': {
+    name: 'Gate Oxide (NMOS)', cat: 'DIELECTRIC',
+    func: 'Ultra-thin dielectric wrapping the NMOS fin on three faces beneath the gate.',
+    role: 'Capacitive coupling — the gate field inverts the fin surfaces through it.',
+    conn: 'Sits exactly between the fin surfaces and the gate wrap walls.',
+    phys: 'Shown as a translucent ice-blue sheet, only 0.45 λ thick.',
+    doping: '— (gate dielectric)',
+    dims: [['Thickness', 0.45]]
+  },
+  'gate': {
+    name: 'Gate — Wrap-Around (Tri-Gate)', cat: 'DEVICE / SHARED',
+    func: 'One continuous gate strip crossing both fins; wraps each fin on both sidewalls AND the top for maximum electrostatic control.',
+    role: 'Input node of the inverter (IN) — drives the PMOS and NMOS channels simultaneously.',
+    conn: 'Continuous from the NMOS wrap to the PMOS wrap, with a tail past the PMOS fin to the gate contact → IN metal. Isolated from silicon by the gate oxide.',
+    phys: 'The 3-side wrap is THE defining FinFET feature versus a planar MOSFET — check it from any camera angle.',
+    doping: '— (metal gate / poly)',
+    dims: [['Gate length Lg', 6], ['Wrap thickness', 1.6], ['Height above STI', 7.6], ['Strip span', 29]]
+  },
+  'spacer-p': {
+    name: 'Gate Spacer (PMOS)', cat: 'DIELECTRIC',
+    func: 'Thin dielectric shell on the gate flanks that offsets the S/D epi from the gate edge.',
+    role: 'Sets the effective channel length; protects the gate edge during epitaxy.',
+    conn: 'Sits between the gate wrap and the source/drain epi with zero gap.',
+    phys: 'Pale slate dielectric, deliberately distinct from the ice-blue gate oxide.',
+    doping: '— (dielectric)',
+    dims: [['Width', 1.5], ['Height', 8]]
+  },
+  'spacer-n': {
+    name: 'Gate Spacer (NMOS)', cat: 'DIELECTRIC',
+    func: 'Thin dielectric shell on the gate flanks that offsets the S/D epi from the gate edge.',
+    role: 'Sets the effective channel length; protects the gate edge during epitaxy.',
+    conn: 'Sits between the gate wrap and the source/drain epi with zero gap.',
+    phys: 'Pale slate dielectric, deliberately distinct from the ice-blue gate oxide.',
+    doping: '— (dielectric)',
+    dims: [['Width', 1.5], ['Height', 8]]
+  },
+  'epi-p-s': {
+    name: 'PMOS Source Epi (Raised S/D)', cat: 'DEVICE / PMOS',
+    func: 'Raised epitaxial source — the PMOS end of the fin, widened and thickened.',
+    role: 'Source terminal of the PMOS; supplies VDD into the channel when IN = 0.',
+    conn: 'Merges with the fin end; abuts the gate spacer; carries a contact up to the VDD branch of Metal-1.',
+    phys: 'Wider and taller than the fin it caps — exactly what real raised source/drain looks like.',
+    doping: 'P⁺ boron ≈ 1×10²⁰ cm⁻³ (illustrative)',
+    dims: [['Width', 6], ['Length', 8.5], ['Height above STI', 7]]
+  },
+  'epi-p-d': {
+    name: 'PMOS Drain Epi (Raised S/D)', cat: 'DEVICE / PMOS',
+    func: 'Raised epitaxial drain of the PMOS.',
+    role: 'Drain terminal — feeds the OUT node when the PMOS conducts.',
+    conn: 'Merges with the fin end; abuts the spacer; contact up to the OUT branch of Metal-1 (shared with the NMOS drain).',
+    phys: 'Mirror of the source epi on the drain side of the gate.',
+    doping: 'P⁺ boron ≈ 1×10²⁰ cm⁻³ (illustrative)',
+    dims: [['Width', 6], ['Length', 8.5], ['Height above STI', 7]]
+  },
+  'epi-n-s': {
+    name: 'NMOS Source Epi (Raised S/D)', cat: 'DEVICE / NMOS',
+    func: 'Raised epitaxial source — the NMOS end of the fin, widened and thickened.',
+    role: 'Source terminal of the NMOS; sinks current to GND when IN = 1.',
+    conn: 'Merges with the fin end; abuts the gate spacer; contact up to the GND branch of Metal-1.',
+    phys: 'Wider and taller than the fin it caps.',
+    doping: 'N⁺ arsenic ≈ 1×10²⁰ cm⁻³ (illustrative)',
+    dims: [['Width', 6], ['Length', 8.5], ['Height above STI', 7]]
+  },
+  'epi-n-d': {
+    name: 'NMOS Drain Epi (Raised S/D)', cat: 'DEVICE / NMOS',
+    func: 'Raised epitaxial drain of the NMOS.',
+    role: 'Drain terminal — discharges the OUT node to GND when IN = 1.',
+    conn: 'Merges with the fin end; abuts the spacer; contact up to the OUT branch of Metal-1 (shared with the PMOS drain).',
+    phys: 'Mirror of the source epi on the drain side of the gate.',
+    doping: 'N⁺ arsenic ≈ 1×10²⁰ cm⁻³ (illustrative)',
+    dims: [['Width', 6], ['Length', 8.5], ['Height above STI', 7]]
+  },
+  'contact-ps': {
+    name: 'Source Contact (PMOS)', cat: 'INTERCONNECT',
+    func: 'Vertical tungsten-plug via from the PMOS source epi top up to Metal-1.',
+    role: 'Ohmic connection — the only legal bridge between silicon and metal.',
+    conn: 'Epi below, VDD metal branch above.',
+    phys: 'Small discrete via, visually distinct from the wide Metal-1 rails.',
+    doping: '— (W plug + liner)',
+    dims: [['Footprint', 3], ['Height', 2]]
+  },
+  'contact-pd': {
+    name: 'Drain Contact (PMOS)', cat: 'INTERCONNECT',
+    func: 'Vertical via from the PMOS drain epi top up to Metal-1.',
+    role: 'Ohmic connection feeding the OUT net.',
+    conn: 'Epi below, OUT metal branch above.',
+    phys: 'Small discrete via between silicon and metal.',
+    doping: '— (W plug + liner)',
+    dims: [['Footprint', 3], ['Height', 2]]
+  },
+  'contact-ns': {
+    name: 'Source Contact (NMOS)', cat: 'INTERCONNECT',
+    func: 'Vertical via from the NMOS source epi top up to Metal-1.',
+    role: 'Ohmic connection to the GND branch.',
+    conn: 'Epi below, GND metal branch above.',
+    phys: 'Small discrete via between silicon and metal.',
+    doping: '— (W plug + liner)',
+    dims: [['Footprint', 3], ['Height', 2]]
+  },
+  'contact-nd': {
+    name: 'Drain Contact (NMOS)', cat: 'INTERCONNECT',
+    func: 'Vertical via from the NMOS drain epi top up to Metal-1.',
+    role: 'Ohmic connection feeding the OUT net (shared with the PMOS drain).',
+    conn: 'Epi below, OUT metal branch above.',
+    phys: 'Small discrete via between silicon and metal.',
+    doping: '— (W plug + liner)',
+    dims: [['Footprint', 3], ['Height', 2]]
+  },
+  'contact-g': {
+    name: 'Gate Contact', cat: 'INTERCONNECT',
+    func: 'Vertical via from the gate-strip tail (past the PMOS fin) up to the IN pad.',
+    role: 'Brings the IN signal onto the shared wrap-around gate.',
+    conn: 'Gate cap below, IN metal pad above.',
+    phys: 'Sits on the gate tail so it never collides with fin or epi geometry.',
+    doping: '— (W plug + liner)',
+    dims: [['Footprint', 3], ['Height', 1.4]]
+  },
+  'metal-vdd': {
+    name: 'Metal-1 — VDD Rail', cat: 'METAL-1',
+    func: 'Power rail feeding the PMOS sources across the full cell width.',
+    role: 'Supply node — reachable from OUT only through the PMOS pull-up.',
+    conn: 'Branch drops to the PMOS source contact. Never touches silicon directly.',
+    phys: 'Plan-view audited: no same-layer overlap with any other net (crossings under it are gate/silicon on lower layers).',
+    doping: '— (Cu/Al metallization)',
+    dims: [['Width', 4], ['Thickness', 2], ['Length', 96]]
+  },
+  'metal-gnd': {
+    name: 'Metal-1 — GND Rail', cat: 'METAL-1',
+    func: 'Ground rail collecting the NMOS sources across the full cell width.',
+    role: 'Return node — reachable from OUT only through the NMOS pull-down.',
+    conn: 'Branch drops to the NMOS source contact. Never touches silicon directly.',
+    phys: 'Dark slate with a light border so it stays legible against the background.',
+    doping: '— (Cu/Al metallization)',
+    dims: [['Width', 4], ['Thickness', 2], ['Length', 96]]
+  },
+  'metal-in': {
+    name: 'Metal-1 — IN Net', cat: 'METAL-1',
+    func: 'Input pad sitting over the gate contact tail.',
+    role: 'Distributes the IN signal onto the shared gate.',
+    conn: 'Gate contact below; no other metal at the same layer crosses its footprint.',
+    phys: 'A short pad, not a rail — the inverter is a single cell.',
+    doping: '— (Cu/Al metallization)',
+    dims: [['Pad size', 5], ['Thickness', 2]]
+  },
+  'metal-out': {
+    name: 'Metal-1 — OUT Net', cat: 'METAL-1',
+    func: 'Vertical branch tying the PMOS and NMOS drain contacts together — the output node.',
+    role: 'Shared drain of the inverter; driven high through the PMOS, low through the NMOS.',
+    conn: 'PMOS drain contact and NMOS drain contact below; clears both power rails laterally.',
+    phys: 'Same-layer footprint never intersects the rails or branches (verified in plan view).',
+    doping: '— (Cu/Al metallization)',
+    dims: [['Width', 4], ['Thickness', 2], ['Length', 17]]
+  },
+  'pmos': {
+    name: 'PMOS Pull-Up Network', cat: 'DEVICE / PMOS',
+    func: 'P-channel FinFET connecting OUT to VDD when IN = 0.',
+    role: 'Pull-up transistor of the inverter.',
+    conn: 'Source → VDD, drain → OUT, gate → IN (shared), body → N-well.',
+    phys: 'Everything on the N-well side of the cell: fin, oxide wrap, spacers, source/drain epi.',
+    doping: 'Channel P-type ≈1×10¹⁸, S/D P⁺ ≈1×10²⁰ cm⁻³ (illustrative)',
+    dims: [['Gate length', 6], ['Fin height', 6], ['Fin pitch', 14]]
+  },
+  'nmos': {
+    name: 'NMOS Pull-Down Network', cat: 'DEVICE / NMOS',
+    func: 'N-channel FinFET connecting OUT to GND when IN = 1.',
+    role: 'Pull-down transistor of the inverter.',
+    conn: 'Source → GND, drain → OUT, gate → IN (shared), body → P-substrate.',
+    phys: 'Everything on the substrate side of the cell: fin, oxide wrap, spacers, source/drain epi.',
+    doping: 'Channel N-type ≈1×10¹⁸, S/D N⁺ ≈1×10²⁰ cm⁻³ (illustrative)',
+    dims: [['Gate length', 6], ['Fin height', 6], ['Fin pitch', 14]]
+  }
+};
+
+/* attach meshes / materials / anchors */
+for (const [cid, arr] of Object.entries(meshesOf)) {
+  if (!COMP[cid]) continue;
+  COMP[cid].meshes = arr;
+}
+COMP['pmos'].meshes = [].concat(meshesOf['fin-p'], meshesOf['gateoxide-p'], meshesOf['spacer-p'],
+  meshesOf['epi-p-s'], meshesOf['epi-p-d']);
+COMP['nmos'].meshes = [].concat(meshesOf['fin-n'], meshesOf['gateoxide-n'], meshesOf['spacer-n'],
+  meshesOf['epi-n-s'], meshesOf['epi-n-d']);
+for (const c of Object.values(COMP)) {
+  const s = new Set();
+  c.meshes.forEach(m => Array.isArray(m.material) ? m.material.forEach(x => s.add(x)) : s.add(m.material));
+  c.mats = [...s];
+  c.anchor = c.meshes[0];
+}
+
+/* =====================================================================
+   λ FORMATTING + DIMENSION TABLES
+   ===================================================================== */
+function fmtL(k) {
+  if (typeof k !== 'number') return String(k);
+  const nm = k * state.lambda;
+  if (nm >= 1000) return (nm / 1000).toFixed(2) + ' µm';
+  return (Math.round(nm * 10) / 10) + ' nm';
+}
+const DIMS = [
+  ['Fin width', 2], ['Fin height above STI', 6], ['Fin pitch', 14], ['Fin length', 32],
+  ['Gate length Lg', 6], ['Gate wrap thickness', 1.6], ['Gate oxide thickness', 0.45],
+  ['Spacer width', 1.5], ['S/D epi width', 6], ['S/D epi length', 8.5],
+  ['Contact footprint', 3], ['Contact height', 2],
+  ['Metal-1 width', 4], ['Metal-1 thickness', 2],
+  ['STI thickness', 3], ['N-well depth', 10.8],
+  ['Die length', 110], ['Die width', 90]
+];
+function renderLambdaTable() {
+  $('#lambdaTable').innerHTML =
+    '<tr><th>DIMENSION</th><th>λ</th><th>' + (state.lambda >= 1000 ? (state.lambda / 1000) + ' µm node' : state.lambda + ' nm node') + '</th></tr>' +
+    DIMS.map(d => '<tr><td>' + d[0] + '</td><td>' + d[1] + ' λ</td><td>' + fmtL(d[1]) + '</td></tr>').join('');
+  renderInspector(); // live-update selected component dims too
+}
+
+/* =====================================================================
+   SELECTION / HIGHLIGHT / POPOVER / INSPECTOR
+   ===================================================================== */
+function setCompEmissive(comp, hex, inten) {
+  comp.mats.forEach(m => { m.emissive.setHex(hex); m.emissiveIntensity = inten; });
+}
+function refreshVisuals() {
+  Object.values(COMP).forEach(c => setCompEmissive(c, 0x000000, 1));
+  /* subtle net-state glow (not selection cyan — different purpose, low intensity) */
+  if (state.in === 1) setCompEmissive(COMP['metal-in'], 0xffcc00, 0.22);
+  if (state.in === 0) setCompEmissive(COMP['metal-out'], 0x00f5a0, 0.22);
+  if (state.selected) setCompEmissive(COMP[state.selected], 0x00e5ff, 0.55);
+}
+function dimsTable(dims) {
+  return '<table class="dims">' + dims.map(d =>
+    '<tr><td>' + d[0] + '</td><td>' + (typeof d[1] === 'number' ? d[1] + ' λ' : d[1]) + '</td><td>' + fmtL(d[1]) + '</td></tr>'
+  ).join('') + '</table>';
+}
+function renderPopover() {
+  const pop = $('#popover'), inner = $('#popInner');
+  if (!state.selected) { pop.hidden = true; return; }
+  const c = COMP[state.selected];
+  inner.innerHTML =
+    '<div class="pop-title">' + c.name + '</div>' +
+    '<span class="pop-cat">' + c.cat + '</span>' +
+    '<div class="pop-body">' +
+    '<p><span class="k">FUNCTION</span><br>' + c.func + '</p>' +
+    '<p><span class="k">ELECTRICAL ROLE</span><br>' + c.role + '</p>' +
+    '<p><span class="k">λ-SCALED DIMENSIONS</span></p>' + dimsTable(c.dims) + '</div>';
+  pop.hidden = false;
+}
+function renderInspector() {
+  const el = $('#inspectorBody');
+  if (!state.selected) {
+    el.innerHTML = '<div class="insp-empty">Click any component in the 3D view, the schematic, or the architecture tree to inspect it.</div>';
+    return;
+  }
+  const c = COMP[state.selected];
+  el.innerHTML =
+    '<div class="insp-title">' + c.name + '</div>' +
+    '<div class="insp-row"><div class="insp-k">CATEGORY</div><div class="insp-v">' + c.cat + '</div></div>' +
+    '<div class="insp-row"><div class="insp-k">FUNCTION</div><div class="insp-v">' + c.func + '</div></div>' +
+    '<div class="insp-row"><div class="insp-k">ELECTRICAL ROLE</div><div class="insp-v">' + c.role + '</div></div>' +
+    '<div class="insp-row"><div class="insp-k">CONNECTIONS</div><div class="insp-v">' + c.conn + '</div></div>' +
+    '<div class="insp-row"><div class="insp-k">PHYSICAL RELATIONSHIP</div><div class="insp-v">' + c.phys + '</div></div>' +
+    '<div class="insp-row"><div class="insp-k">DOPING (ILLUSTRATIVE)</div><div class="insp-v">' + c.doping + '</div></div>' +
+    '<div class="insp-row"><div class="insp-k">λ-SCALED DIMENSIONS</div>' + dimsTable(c.dims) + '</div>';
+}
+function markTree() {
+  $$('#treeBody li[data-cid]').forEach(li => li.classList.toggle('sel', li.dataset.cid === state.selected));
+}
+function select(cid, opts = {}) {
+  if (cid && state.mode === 'schematic' && !opts.stay) setMode('physical');
+  state.selected = cid || null;
+  refreshVisuals();
+  renderPopover();
+  renderInspector();
+  markTree();
+}
+
+/* popover tracks its anchor every frame (camera orbit + explode) */
+const _v = new THREE.Vector3();
+function updatePopover() {
+  const pop = $('#popover');
+  if (!state.selected || state.mode !== 'physical' || pop.hidden) return;
+  const c = COMP[state.selected];
+  c.anchor.getWorldPosition(_v); _v.z += 2.5;
+  _v.project(camera);
+  if (_v.z > 1) { pop.style.display = 'none'; return; }
+  pop.style.display = '';
+  const r = $('#viewport').getBoundingClientRect();
+  const x = r.left + (_v.x * 0.5 + 0.5) * r.width;
+  const y = r.top + (-_v.y * 0.5 + 0.5) * r.height;
+  const below = y - r.top < 280;
+  pop.classList.toggle('below', below);
+  pop.style.left = Math.min(Math.max(x, r.left + 160), r.right - 160) + 'px';
+  pop.style.top = (below ? y + 10 : y - 12) + 'px';
+}
+
+/* --- 3D picking --- */
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2(-2, -2);
+let downPos = null;
+function chainVisible(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
+canvasEl.addEventListener('pointerdown', e => { downPos = [e.clientX, e.clientY]; });
+canvasEl.addEventListener('pointermove', e => {
+  const r = canvasEl.getBoundingClientRect();
+  mouseNDC.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+});
+window.addEventListener('pointerup', e => {
+  if (!downPos) return;
+  const moved = Math.hypot(e.clientX - downPos[0], e.clientY - downPos[1]);
+  downPos = null;
+  if (moved > 6 || e.target !== canvasEl || state.mode !== 'physical') return;
+  const r = canvasEl.getBoundingClientRect();
+  raycaster.setFromCamera(new THREE.Vector2(
+    ((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  const hits = raycaster.intersectObjects(pickMeshes, false).filter(h => chainVisible(h.object));
+  select(hits.length ? hits[0].object.userData.cid : null);
+});
+$('#popClose').addEventListener('click', () => select(null));
+window.addEventListener('keydown', e => { if (e.key === 'Escape') select(null); });
+
+/* =====================================================================
+   CURRENT-FLOW PARTICLES
+   Path IN=0 (PMOS ON): VDD rail → branch → source contact → epi →
+   channel (under the wrap gate) → drain epi → contact → OUT metal.
+   Path IN=1 (NMOS ON): OUT metal → drain contact → epi → channel →
+   source epi → contact → GND branch → GND rail.
+   Electrons mode reverses travel direction. Only the active path runs.
+   ===================================================================== */
+function curveFrom(pts) {
+  return new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)), false, 'catmullrom', 0.12);
+}
+const curveP = curveFrom([
+  [-44, 22, 13], [-8, 22, 13], [-8, 7, 13], [-8, 7, 10.4], [-8, 7, 8.5],
+  [0, 7, 8.5], [8, 7, 8.5], [8, 7, 10.4], [8, 7, 13], [8, 0, 13], [24, 0, 13]
+]);
+const curveN = curveFrom([
+  [24, 0, 13], [8, 0, 13], [8, -7, 13], [8, -7, 10.4], [8, -7, 8.5],
+  [0, -7, 8.5], [-8, -7, 8.5], [-8, -7, 10.4], [-8, -7, 13], [-8, -22, 13], [-44, -22, 13]
+]);
+const markerMat = CP(new THREE.MeshStandardMaterial({
+  color: 0xffd166, emissive: 0xffd166, emissiveIntensity: 0.95, roughness: 0.35, depthTest: false
+}));
+const markers = [];
+for (let i = 0; i < 16; i++) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 12), markerMat);
+  m.renderOrder = 990;
+  G.flow.add(m);
+  markers.push(m);
+}
+let flowT = 0;
+function updateFlow(dt) {
+  const vis = G.flow.visible && state.mode === 'physical';
+  markers.forEach(m => m.visible = vis);
+  if (!vis) return;
+  flowT += dt;
+  const curve = state.in === 0 ? curveP : curveN;
+  const rev = state.flow === 'electrons';
+  markers.forEach((m, i) => {
+    let t = (i / markers.length + flowT * 0.05) % 1;
+    if (rev) t = 1 - t;
+    m.position.copy(curve.getPointAt(t));
+  });
+}
+function updateMarkerColor() {
+  const c = state.flow === 'current' ? 0xffd166 : 0xb388ff;
+  markerMat.color.setHex(c); markerMat.emissive.setHex(c);
+}
+
+/* =====================================================================
+   STATE BADGE
+   ===================================================================== */
+function setChip(el, txt, on) { el.textContent = txt; el.classList.toggle('on', on); }
+function updateBadge() {
+  const inv = state.in, outv = 1 - inv;
+  setChip($('#bIn'), 'IN ' + inv, inv === 1);
+  setChip($('#bP'), 'PMOS ' + (inv === 0 ? 'ON' : 'OFF'), inv === 0);
+  setChip($('#bN'), 'NMOS ' + (inv === 1 ? 'ON' : 'OFF'), inv === 1);
+  setChip($('#bOut'), 'OUT ' + outv, outv === 1);
+  $('#statusPop').innerHTML =
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+    '<span class="b-chip' + (inv === 1 ? ' on' : '') + '" style="background:' + (inv === 1 ? 'var(--inc)' : '') + '">IN ' + inv + '</span>' +
+    '<span class="b-chip' + (inv === 0 ? ' on' : '') + '">PMOS ' + (inv === 0 ? 'ON' : 'OFF') + '</span>' +
+    '<span class="b-chip' + (inv === 1 ? ' on' : '') + '">NMOS ' + (inv === 1 ? 'ON' : 'OFF') + '</span>' +
+    '<span class="b-chip' + (outv === 1 ? ' on' : '') + '" style="background:' + (outv === 1 ? 'var(--outc)' : '') + '">OUT ' + outv + '</span></div>' +
+    '<div class="b-note" style="text-align:left">Logical / behavioral visualization — not a transistor-level physical simulation. Dimensions are illustrative and λ-scaled (not a real PDK); vertical scale exaggerated for visibility.</div>';
+}
+
+/* =====================================================================
+   UI — toolbar, drawers, view controls, layer list, legend
+   ===================================================================== */
+function seg(id, fn) {
+  const segEl = $(id);
+  segEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    segEl.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    fn(b.dataset.v);
+  }));
+}
+function setSeg(id, v) {
+  $(id).querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === String(v)));
+}
+function setMode(m) {
+  state.mode = m;
+  setSeg('#modeSeg', m);
+  $('#schematic').hidden = m !== 'schematic';
+  $('#viewControls').style.display = m === 'physical' ? '' : 'none';
+  if (m === 'schematic') $('#popover').hidden = true;
+  else renderPopover();
+}
+function setIN(v) { state.in = Number(v); updateBadge(); refreshVisuals(); }
+function setFlow(v) { state.flow = v; updateMarkerColor(); }
+
+seg('#modeSeg', setMode);
+seg('#inSeg', setIN);
+seg('#flowSeg', setFlow);
+
+function setExplode(v) {
+  state.explode = v;
+  EXPLODE.forEach(([k, f]) => G[k].position.z = f * v * C.explodeStep);
+  $('#explodeVal').textContent = Math.round(v * 100) + '%';
+  $('#explodeRange').value = Math.round(v * 100);
+}
+$('#explodeRange').addEventListener('input', e => setExplode(e.target.value / 100));
+
+function setScrub(axis, t) { // t: 0 closed → 1 fully open
+  const ext = axis === 'x' ? C.die.hx : axis === 'y' ? C.die.hy : 24;
+  planes[axis].constant = -(ext + 8) + t * (2 * (ext + 8));
+}
+[['#scrubX', 'x'], ['#scrubY', 'y'], ['#scrubZ', 'z']].forEach(([sel, ax]) => {
+  $(sel).addEventListener('input', e => setScrub(ax, e.target.value / 1000));
+});
+
+/* RESET: top-down camera, explode 1%, scrubs open, IN 0, flow current,
+   selection cleared, physical mode */
+$('#resetBtn').addEventListener('click', () => {
+  setMode('physical');
+  setSeg('#inSeg', 0); setIN(0);
+  setSeg('#flowSeg', 'current'); setFlow('current');
+  setExplode(0.01);
+  [['#scrubX', 'x'], ['#scrubY', 'y'], ['#scrubZ', 'z']].forEach(([sel, ax]) => {
+    $(sel).value = 1000; setScrub(ax, 1);
+  });
+  camera.position.set(2, -2, 175);
+  controls.target.set(0, 0, 2);
+  controls.update();
+  select(null);
+});
+
+/* drawers + grips */
+function drawer(el, grip, bodyClass) {
+  $(grip).addEventListener('click', () => {
+    const open = el.classList.toggle('open');
+    document.body.classList.toggle(bodyClass, open);
+  });
+}
+drawer($('#leftDrawer'), '#gripL', 'left-open');
+drawer($('#rightDrawer'), '#gripR', 'right-open');
+
+/* collapsible sections */
+$$('.sec-h, #vcHead').forEach(h => h.addEventListener('click', () => {
+  const t = h.parentElement;
+  if (t.id === 'viewControls') t.classList.toggle('closed');
+  else t.classList.toggle('closed');
+}));
+
+/* layer visibility */
+const LAYERS = [
+  ['substrate', 'Substrate', '#ff2a85', G.substrate],
+  ['nwell', 'N-Well (glass)', '#e0f7fa', G.nwell],
+  ['sti', 'STI oxide', '#3d4c5e', G.sti],
+  ['fin', 'Fin', '#d4a359', G.fin],
+  ['epi', 'S/D Epi', '#d4a359', G.epi],
+  ['gateoxide', 'Gate oxide', '#cdeef5', G.gateoxide],
+  ['gate', 'Gate (wrap)', '#8b0000', G.gate],
+  ['spacer', 'Spacer', '#8ba0b5', G.spacer],
+  ['contact', 'Contacts', '#222222', G.contact],
+  ['metal', 'Metal-1', '#3a3d40', G.metal]
+];
+$('#layerList').innerHTML =
+  LAYERS.map(l => '<label class="lay"><input type="checkbox" checked data-layer="' + l[0] +
+    '"><span class="sw" style="background:' + l[2] + '"></span>' + l[1] + '</label>').join('') +
+  '<label class="lay"><input type="checkbox" checked data-special="labels"><span class="sw" style="background:#c9d1d9"></span>Labels</label>' +
+  '<label class="lay"><input type="checkbox" checked data-special="flow"><span class="sw" style="background:#ffd166"></span>Current-flow markers</label>';
+$('#layerList').addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.layer) {
+    const g = LAYERS.find(l => l[0] === t.dataset.layer)[3];
+    g.visible = t.checked;
+  } else if (t.dataset.special === 'labels') {
+    allLabels.forEach(s => s.visible = t.checked);
+  } else if (t.dataset.special === 'flow') {
+    G.flow.visible = t.checked;
+  }
+});
+
+/* legend */
+const LEGEND = [
+  ['#ff2a85', 'P-substrate', 'matte magenta silicon (#d11b6d shadow faces)'],
+  ['#e0f7fa', 'N-well', 'frosted glass — physical transmission 0.85, IOR 1.45'],
+  ['#3d4c5e', 'STI', 'recessed oxide dielectric'],
+  ['#d4a359', 'Fin / S/D epi', 'golden-amber silicon, roughness 0.55'],
+  ['#cdeef5', 'Gate oxide', 'translucent ice-blue, ultra-thin'],
+  ['#8b0000', 'Gate (wrap)', 'matte burgundy, wraps fin on 3 sides (#9e2a2b top)'],
+  ['#8ba0b5', 'Spacer', 'thin dielectric on gate flanks'],
+  ['#222222', 'Contacts', 'near-black brushed metal plugs'],
+  ['#ff4d4d', 'Metal-1 nets', 'VDD red · GND slate · IN mustard · OUT mint']
+];
+$('#legendList').innerHTML = LEGEND.map(l =>
+  '<div class="leg"><span class="sw" style="background:' + l[0] + '"></span><div>' + l[1] +
+  '<span>' + l[2] + '</span></div></div>').join('');
+
+/* λ dropdown */
+$('#lambdaSel').addEventListener('change', e => {
+  state.lambda = Number(e.target.value);
+  renderLambdaTable();
+});
+
+/* architecture tree clicks */
+$('#treeBody').addEventListener('click', e => {
+  const li = e.target.closest('[data-cid]');
+  if (li) select(li.dataset.cid);
+});
+
+/* schematic clicks → jump to physical with matching component */
+const SCH_MAP = {
+  'sch-vdd': 'metal-vdd', 'sch-gnd': 'metal-gnd', 'sch-in': 'metal-in',
+  'sch-out': 'metal-out', 'sch-pmos': 'pmos', 'sch-nmos': 'nmos'
+};
+$$('#schematic .hit').forEach(g => g.addEventListener('click', () => select(SCH_MAP[g.id])));
+
+/* mobile status popover */
+$('#statusBtn').addEventListener('click', () => $('#statusPop').classList.toggle('open'));
+
+/* =====================================================================
+   RESIZE + MAIN LOOP
+   ===================================================================== */
+const vp = $('#viewport');
+function resize() {
+  const w = vp.clientWidth, h = vp.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(vp);
+resize();
+
+let lastHover = 0;
+const _t0 = { v: performance.now() };
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - _t0.v) / 1000);
+  _t0.v = now;
+  controls.update();
+  updateCamTween();
+  updateFlow(dt);
+  updatePopover();
+  drawWave(dt, vaState !== 'idle');
+  /* hover cursor (throttled raycast) */
+  if (state.mode === 'physical' && now - lastHover > 140) {
+    lastHover = now;
+    if (mouseNDC.x > -1.5) {
+      raycaster.setFromCamera(mouseNDC, camera);
+      const hit = raycaster.intersectObjects(pickMeshes, false).some(h => chainVisible(h.object));
+      canvasEl.style.cursor = hit ? 'pointer' : 'grab';
+    }
+  }
+  if (state.mode === 'physical') renderer.render(scene, camera);
+}
+
+/* =====================================================================
+   VOICE ASSISTANT — bottom pill: mic + waveform + mute + status.
+   STT: browser SpeechRecognition (webkit fallback; Chrome/Edge).
+   TTS: browser speechSynthesis by default, with an optional hook for the
+   Sarvam AI `bulbul:v1` text-to-speech endpoint — set SARVAM_TTS.enabled
+   = true and supply your API key at deploy time. Never hardcode keys in
+   a file you publish; the built-in browser voice needs no key at all.
+   ===================================================================== */
+const SARVAM_TTS = {
+  enabled: false,                                  // ← flip on + add key for Sarvam bulbul:v1
+  endpoint: 'https://api.sarvam.ai/text-to-speech',
+  apiKey: '',                                      // ← private deployments only
+  model: 'bulbul:v1', speaker: 'ananya'
+};
+
+const vaEl = $('#voiceAssistant'), micBtn = $('#micBtn');
+const DEFAULT_STATUS = 'Tap to ask about any layer…';
+let vaState = 'idle', voiceEnabled = true, speakGuard = null, recogActive = false;
+
+function setStatus(t){ $('#voiceStatus').textContent = t; }
+function setVAState(s){
+  vaState = s;
+  vaEl.classList.toggle('active', s !== 'idle');
+  vaEl.classList.toggle('listening', s === 'listening');
+  vaEl.classList.toggle('speaking', s === 'speaking');
+}
+function idleStatus(){ if (recogActive) return; setVAState('idle'); setStatus(DEFAULT_STATUS); }
+
+/* ---------- context-aware answers (selection / IN / flow / node) ---------- */
+function componentAnswer(cid){
+  const c = COMP[cid];
+  const dims = c.dims.filter(d => typeof d[1] === 'number').slice(0, 2)
+    .map(d => d[0].toLowerCase() + ' is ' + d[1] + ' lambda, about ' + fmtL(d[1])).join(', and ');
+  return c.name + '. ' + c.func + ' ' + c.role + (dims ? ' To give you a sense of scale, its ' + dims + '.' : '');
+}
+function flowAnswer(){
+  const cur = state.flow === 'current';
+  if (state.in === 0) return 'With IN at 0, the PMOS is on and the NMOS is off. ' +
+    (cur ? 'Conventional current flows from the V D D rail, down the source contact, through the raised source epi, across the channel under the wrap-around gate, and out through the drain contact to the OUT node — pulling the output high to logic 1.'
+         : 'You are in electron flow mode, so the carriers trace the reverse path: from the OUT node, back through the PMOS channel and source, up to the V D D rail.');
+  return 'With IN at 1, the NMOS is on and the PMOS is off. ' +
+    (cur ? 'Conventional current flows from the OUT node, down the drain contact, through the channel under the wrap-around gate, and out of the source to the G N D rail — discharging the output to logic 0.'
+         : 'In electron flow mode the carriers move the other way: from the G N D rail through the NMOS channel into the OUT node, charging it up.');
+}
+function nodeAnswer(){
+  const lam = state.lambda >= 1000 ? (state.lambda / 1000) + ' micrometers' : state.lambda + ' nanometers';
+  const nodeLabel = state.lambda >= 1000 ? (state.lambda / 1000) + ' micrometer' : state.lambda + ' nanometer';
+  return 'The model is currently at the ' + nodeLabel + ' illustrative node, so lambda equals ' + lam +
+    '. Every physical dimension is a multiple of lambda — the gate length is 6 lambda, about ' + fmtL(6) +
+    ', and the fin pitch is 14 lambda, about ' + fmtL(14) + '. These numbers are illustrative, not a real process design kit.';
+}
+function selectedAnswer(){
+  return state.selected
+    ? componentAnswer(state.selected) + ' That is the component currently selected in the property inspector.'
+    : 'Nothing is selected right now. Tap any component in the 3D view, or ask me about the gate, the fins, the N well, or the metal rails.';
+}
+function circuitAnswer(){
+  return 'This is a C M O S inverter built with FinFETs. One continuous gate wraps around both the PMOS and NMOS fins and is driven by the input. ' +
+    (state.in === 0 ? 'With IN at 0 the PMOS conducts, connecting the output to V D D, so OUT is 1.'
+                    : 'With IN at 1 the NMOS conducts, connecting the output to ground, so OUT is 0.') +
+    ' The output is always the logical opposite of the input.';
+}
+function helpAnswer(){
+  return 'You can ask me about any layer — for example: what is the wrap-around gate, show me the N well, explain shallow trench isolation, or how does current flow. Quick questions are also available as chips above the microphone.';
+}
+const VOICE_RULES = [
+  [/gate\s*oxide|oxide/, 'gateoxide-p'],
+  [/n[- ]?well/, 'nwell'],
+  [/shallow\s*trench|\bsti\b|isolation/, 'sti'],
+  [/substrate|bulk/, 'substrate'],
+  [/spacer/, 'spacer-p'],
+  [/\bepi\b|epitax|source\s*(\/|and)?\s*drain|raised/, 'epi-p-s'],
+  [/contact|\bvias?\b|plug/, 'contact-ps'],
+  [/v\s*d\s*d|vdd|power rail|supply/, 'metal-vdd'],
+  [/\bgnd\b|ground/, 'metal-gnd'],
+  [/\binput\b|in\s*(net|pad|signal)/, 'metal-in'],
+  [/\boutput\b|\bout\b/, 'metal-out'],
+  [/\bpmos\b|pull\s*-?\s*up|p\s*-?channel/, 'pmos'],
+  [/\bnmos\b|pull\s*-?\s*down|n\s*-?channel/, 'nmos'],
+  [/tri\s*-?\s*gate|wrap\s*-?\s*around|\bgate\b/, 'gate'],
+  [/\bfins?\b/, 'fin-p']
+];
+function matchComponent(t){
+  for (const [re, cid] of VOICE_RULES) if (re.test(t)) return cid;
+  return null;
+}
+
+/* ---------- highlight + orbit camera onto the component ---------- */
+let camTween = null;
+const _fc = new THREE.Vector3(), _fs = new THREE.Vector3();
+function focusOn(comp){
+  const b = new THREE.Box3();
+  comp.meshes.forEach(m => b.expandByObject(m));
+  if (b.isEmpty()) return;
+  b.getCenter(_fc);
+  const dist = Math.min(220, Math.max(55, (b.getSize(_fs).length() || 10) * 1.9));
+  const dir = camera.position.clone().sub(controls.target);
+  if (dir.lengthSq() < 1e-6) dir.set(1, -1, 0.8);
+  dir.normalize(); dir.z = Math.max(dir.z, 0.38); dir.normalize();
+  camTween = {
+    t0: performance.now(), dur: 1150,
+    p0: camera.position.clone(), g0: controls.target.clone(),
+    p1: _fc.clone().addScaledVector(dir, dist), g1: _fc.clone()
+  };
+}
+function updateCamTween(){
+  if (!camTween) return;
+  let k = (performance.now() - camTween.t0) / camTween.dur;
+  if (k >= 1) k = 1;
+  const e = k * k * (3 - 2 * k);
+  camera.position.lerpVectors(camTween.p0, camTween.p1, e);
+  controls.target.lerpVectors(camTween.g0, camTween.g1, e);
+  if (k === 1) camTween = null;
+}
+
+/* ---------- speech synthesis (browser voice, optional Sarvam bulbul:v1) ---------- */
+function speak(text){
+  if (!voiceEnabled){ setStatus(text.length > 96 ? text.slice(0, 96) + '…' : text); return; }
+  setStatus('Speaking…'); setVAState('speaking');
+  clearTimeout(speakGuard);
+  const done = () => idleStatus();
+  if (SARVAM_TTS.enabled && SARVAM_TTS.apiKey){
+    fetch(SARVAM_TTS.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-subscription-key': SARVAM_TTS.apiKey },
+      body: JSON.stringify({ text: text, model: SARVAM_TTS.model, speaker: SARVAM_TTS.speaker, target_lang: 'en-IN' })
+    }).then(r => r.json()).then(d => {
+      if (d && d.audios && d.audios[0]){
+        const a = new Audio('data:audio/wav;base64,' + d.audios[0]);
+        a.onended = done; a.play();
+        speakGuard = setTimeout(done, 2000 + text.length * 90);
+      } else { setStatus(text.slice(0, 110)); setTimeout(done, 500); }
+    }).catch(() => { setStatus(text.slice(0, 110)); setTimeout(done, 500); });
+    return;
+  }
+  if ('speechSynthesis' in window){
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const vs = window.speechSynthesis.getVoices();
+      const v = vs.find(x => /en[-_]IN/i.test(x.lang)) || vs.find(x => /^en/i.test(x.lang));
+      if (v) u.voice = v;
+      u.rate = 1; u.pitch = 1;
+      u.onend = done; u.onerror = done;
+      window.speechSynthesis.speak(u);
+      /* safety: some locked-down/headless browsers never fire events */
+      speakGuard = setTimeout(done, 2000 + text.length * 75);
+      return;
+    } catch (e) { /* fall through to text display */ }
+  }
+  setStatus(text.slice(0, 110));
+  setTimeout(done, 1500 + text.length * 40);
+}
+
+/* ---------- speech recognition ---------- */
+const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog = null;
+if (SRClass){
+  recog = new SRClass();
+  recog.lang = 'en-IN'; recog.interimResults = true; recog.continuous = false; recog.maxAlternatives = 1;
+  recog.onresult = e => {
+    const r = e.results[e.results.length - 1];
+    if (r.isFinal) handleQuery(r[0].transcript);
+    else setStatus('“' + r[0].transcript + '”');
+  };
+  recog.onend = () => { recogActive = false; micBtn.classList.remove('recording'); idleStatus(); };
+  recog.onerror = () => { recogActive = false; micBtn.classList.remove('recording'); idleStatus(); };
+}
+micBtn.addEventListener('click', () => {
+  if (!recog){
+    setStatus('Voice input not supported here — use the chips above');
+    setTimeout(idleStatus, 2600);
+    return;
+  }
+  if (recogActive){ try { recog.stop(); } catch (e) {} return; }
+  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+  try { recog.start(); } catch (e) { return; }
+  recogActive = true;
+  micBtn.classList.add('recording');
+  setStatus('Listening…'); setVAState('listening');
+});
+
+/* ---------- live waveform visualizer ---------- */
+const waveCtx = $('#waveCanvas').getContext('2d');
+const waveLevels = new Array(22).fill(0.08);
+const waveSeeds = waveLevels.map(() => Math.random() * Math.PI * 2);
+function drawWave(dt, active){
+  const cv = waveCtx.canvas, W = cv.width, H = cv.height;
+  waveCtx.clearRect(0, 0, W, H);
+  const t = performance.now() / 1000;
+  const n = waveLevels.length, bw = W / n;
+  for (let i = 0; i < n; i++){
+    const target = active
+      ? 0.18 + 0.8 * Math.abs(Math.sin(t * 5.5 + waveSeeds[i] * 3 + i * 0.55)) * (0.45 + 0.55 * Math.abs(Math.sin(t * 2.1 + i * 0.8)))
+      : 0.07 + 0.045 * Math.sin(t * 1.6 + i * 0.7);
+    waveLevels[i] += (target - waveLevels[i]) * Math.min(1, dt * 12);
+    const h = Math.max(2, waveLevels[i] * (H - 6));
+    waveCtx.fillStyle = active ? 'rgba(0,229,255,0.9)' : 'rgba(0,229,255,0.4)';
+    waveCtx.fillRect(i * bw + bw * 0.22, (H - h) / 2, bw * 0.56, h);
+  }
+}
+
+/* ---------- query handling ---------- */
+function handleQuery(text){
+  setVAState('thinking'); setStatus('Thinking…');
+  const t = ' ' + text.toLowerCase() + ' ';
+  setTimeout(() => {
+    let answer;
+    if (/node|nanometer|\bnm\b|lambda|λ|scal/.test(t)){
+      answer = nodeAnswer();
+    } else if (/flow|electron|conduct|current/.test(t)){
+      const m = t.match(/in\s*(=|is|at)?\s*(zero|0|one|1)/);
+      if (m){
+        const v = /0|zero/.test(m[2]) ? 0 : 1;
+        if (v !== state.in){ setSeg('#inSeg', v); setIN(v); }
+      }
+      answer = flowAnswer();
+    } else if (/selected|highlighted|inspecting|looking at/.test(t)){
+      answer = selectedAnswer();
+    } else if (/inverter|circuit|how does (it|this) work|overview/.test(t)){
+      answer = circuitAnswer();
+    } else {
+      const cid = matchComponent(t);
+      if (cid){
+        select(cid);            /* cyan highlight + popover + inspector */
+        focusOn(COMP[cid]);     /* orbit the camera onto it */
+        answer = componentAnswer(cid);
+      } else answer = helpAnswer();
+    }
+    speak(answer);
+  }, 380);
+}
+
+/* quick-question chips + mute toggle */
+$$('.v-chip').forEach(b => b.addEventListener('click', () => handleQuery(b.dataset.q)));
+$('#ttsToggle').addEventListener('click', () => {
+  voiceEnabled = !voiceEnabled;
+  $('#ttsToggle').classList.toggle('muted', !voiceEnabled);
+  if (!voiceEnabled){
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+    idleStatus();
+  }
+});
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+setExplode(0.01);                       // visibly alive on load, per spec
+setScrub('x', 1); setScrub('y', 1); setScrub('z', 1);
+updateBadge();
+updateMarkerColor();
+renderLambdaTable();
+renderInspector();
+animate();
+</script>
+</body>
+</html>
